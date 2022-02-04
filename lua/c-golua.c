@@ -9,9 +9,18 @@
 #define MT_GOINTERFACE "GoLua.GoInterface"
 
 #define GOLUA_DEFAULT_MSGHANDLER "golua_default_msghandler"
+#define MAX_ALLOCATORS 1024
 
 static const char GoStateRegistryKey = 'k'; //golua registry key
 static const char PanicFIDRegistryKey = 'k';
+
+typedef struct {
+    unsigned int max;
+    unsigned int current;
+	unsigned int opcounter;
+} MemAllocator;
+
+MemAllocator allocators[MAX_ALLOCATORS];
 
 
 /* taken from lua5.2 source */
@@ -324,6 +333,50 @@ void* allocwrapper(void* ud, void *ptr, size_t osize, size_t nsize)
 lua_State* clua_newstate(void* goallocf)
 {
 	return lua_newstate(&allocwrapper,goallocf);
+}
+
+void* clua_memalloc(void* ud, void *ptr, size_t osize, size_t nsize)
+{
+	MemAllocator* alloc = (MemAllocator*)ud;
+	if (nsize == 0) {
+        free(ptr);
+		alloc->opcounter++;
+		if (alloc->max > 0) {
+			alloc->current -= osize;
+		}
+        return 0;
+    } else {
+		alloc->opcounter++;
+		if (alloc->max > 0) {
+			alloc->current = alloc->current - osize + nsize;
+			if (alloc->current > alloc->max) {
+				return 0;
+			}
+		}
+        return realloc(ptr, nsize);
+	}
+}
+
+lua_State* clua_newstatemem(unsigned int index, unsigned int limit)
+{
+	MemAllocator* alloc = &allocators[index];
+	alloc->max = limit;
+	alloc->current = 0;
+	alloc->opcounter = 0;
+
+	return lua_newstate(&clua_memalloc, alloc);
+}
+
+unsigned int clua_memusage(unsigned int index)
+{
+	MemAllocator* alloc = &allocators[index];
+	return alloc->current;
+}
+
+unsigned int clua_memopcounter(unsigned int index)
+{
+	MemAllocator* alloc = &allocators[index];
+	return alloc->opcounter;
 }
 
 void clua_setallocf(lua_State* L, void* goallocf)

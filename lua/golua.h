@@ -20,6 +20,10 @@ size_t clua_getgostate(lua_State* L);
 GoInterface clua_atpanic(lua_State* L, unsigned int panicf_id);
 int clua_callluacfunc(lua_State* L, lua_CFunction f);
 lua_State* clua_newstate(void* goallocf);
+lua_State* clua_newstatemem(unsigned int index, unsigned int limit);
+unsigned int clua_memusage(unsigned int index);
+unsigned int clua_memopcounter(unsigned int index);
+void clua_freestatemem(unsigned int index);
 void clua_setallocf(lua_State* L, void* goallocf);
 
 void clua_openbase(lua_State* L);

@@ -340,6 +340,22 @@ func NewStateAlloc(f Alloc) *State {
 	return L
 }
 
+// Creates a new lua interpreter state with the given allocation function
+// index: 0..MAX_ALLOCATORS-1 (def. 1024)
+func NewStateMemLimit(index uint, limit uint) *State {
+	ls := C.clua_newstatemem(C.uint(index), C.uint(limit))
+	L := newState(ls)
+	return L
+}
+
+func GetStateMemUsage(index uint) uint {
+	return uint(C.clua_memusage(C.uint(index)))
+}
+
+func GetStateMemOpCounter(index uint) uint {
+	return uint(C.clua_memopcounter(C.uint(index)))
+}
+
 // lua_newtable
 func (L *State) NewTable() {
 	C.lua_createtable(L.s, 0, 0)
