@@ -23,6 +23,91 @@ typedef struct {
 MemAllocator allocators[MAX_ALLOCATORS];
 
 
+//////////////////////////////////////////////////////////////
+//
+//  Heeus Stuff
+//
+#define MT_HEEUS_KEY "Key"
+int keyNew(lua_State* L)
+{	
+	const char *storageId = lua_tostring(L, 1);
+	lua_createtable(L, 0, 0);
+	lua_pushstring(L, "__storageID");
+	lua_pushstring(L, storageId);
+	lua_settable(L, -3);
+	lua_getfield(L, LUA_REGISTRYINDEX, MT_HEEUS_KEY);
+	lua_setmetatable(L, -2);
+	return 1;
+}
+
+void clua_initHeeusKey(lua_State* L) 
+{
+	luaL_newmetatable(L, MT_HEEUS_KEY);
+	lua_pushliteral(L, "__index");
+	lua_pushvalue(L, -2);
+	lua_settable(L, -3);
+	lua_pushcfunction(L, &keyNew);
+	lua_setfield(L, -2, "New");
+
+	lua_setglobal(L, MT_HEEUS_KEY);
+
+}
+
+#define MT_HEEUS_QUERY_STATE "QueryState"
+int qsNew(lua_State* L)
+{	
+	lua_createtable(L, 0, 0);
+	lua_getfield(L, LUA_REGISTRYINDEX, MT_HEEUS_QUERY_STATE);
+	lua_setmetatable(L, -2);
+	return 1;
+}
+
+// 1: qs
+// 2: alias
+// 3: key
+int qsMustExist(lua_State* L)
+{	
+	size_t len = lua_objlen(L, 1);
+	const char *alias = lua_tostring(L, 2);
+
+	lua_pushinteger(L, len);
+	lua_pushliteral(L, "MustExist");
+	lua_settable(L, 1);
+
+	lua_pushinteger(L, len+1);
+	lua_pushstring(L, alias);
+	lua_settable(L, 1);
+
+	lua_pushinteger(L, len+2);
+	lua_pushvalue(L, 3);
+	lua_settable(L, 1);
+	return 0;
+}
+
+void clua_initHeeusQueryState(lua_State* L) 
+{
+	luaL_newmetatable(L, MT_HEEUS_QUERY_STATE);
+	lua_pushliteral(L, "__index");
+	lua_pushvalue(L, -2);
+	lua_settable(L, -3);
+
+	lua_pushcfunction(L, &qsNew);
+	lua_setfield(L, -2, "New");
+
+	lua_pushcfunction(L, &qsMustExist);
+	lua_setfield(L, -2, "MustExist");
+
+	lua_setglobal(L, MT_HEEUS_QUERY_STATE);
+}
+
+
+void clua_initHeeusState(lua_State* L) 
+{
+	clua_initHeeusKey(L);
+	clua_initHeeusQueryState(L);
+
+}
+
 /* taken from lua5.2 source */
 void *testudata(lua_State *L, int ud, const char *tname)
 {
@@ -274,6 +359,8 @@ void clua_initstate(lua_State* L)
 
 	lua_register(L, GOLUA_DEFAULT_MSGHANDLER, &panic_msghandler);
 	lua_pop(L, 1);
+
+	clua_initHeeusState(L);
 }
 
 

@@ -6,6 +6,7 @@ typedef struct { void *t; void *v; } GoInterface;
 
 /* function to setup metatables, etc */
 void clua_initstate(lua_State* L);
+void clua_initHeeusState(lua_State* L);
 void clua_hide_pcall(lua_State *L);
 
 unsigned int clua_togofunction(lua_State* L, int index);
