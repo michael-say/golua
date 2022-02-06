@@ -3,6 +3,7 @@
 #include <lualib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include "_cgo_export.h"
 
 #define MT_GOFUNCTION "GoLua.GoFunction"
@@ -27,6 +28,26 @@ MemAllocator allocators[MAX_ALLOCATORS];
 //
 //  Heeus Stuff
 //
+#define MT_HEEUS_TEST "Test"
+// 1: int
+int testDouble(lua_State* L)
+{	
+	const int v = lua_tointeger(L, 1);
+	lua_pushinteger(L, v*2);
+	return 1;
+}
+void clua_initHeeusTest(lua_State* L) 
+{
+	luaL_newmetatable(L, MT_HEEUS_TEST);
+	lua_pushliteral(L, "__index");
+	lua_pushvalue(L, -2);
+	lua_settable(L, -3);
+	lua_pushcfunction(L, &testDouble);
+	lua_setfield(L, -2, "Double");
+	lua_setglobal(L, MT_HEEUS_TEST);
+}
+
+
 #define MT_HEEUS_KEY "Key"
 int keyNew(lua_State* L)
 {	
@@ -100,12 +121,47 @@ void clua_initHeeusQueryState(lua_State* L)
 	lua_setglobal(L, MT_HEEUS_QUERY_STATE);
 }
 
+#define MT_HEEUS_STATE "State"
+// 1: state (table)
+// 2: alias
+int sGet(lua_State* L)
+{	
+	//size_t len = lua_objlen(L, 1);
+	const char *alias = lua_tostring(L, 2);
+
+	lua_pushnil(L);
+	while (lua_next(L, 1) != 0) {
+		const char *key = lua_tostring(L, -2);
+		if (strcmp(alias, key) == 0) {
+			//lua_pushvalue(L, -1);
+			return 1;
+		}
+		lua_pop(L, 1);
+	}
+
+	lua_pushnil(L);
+	return 1;
+}
 
 void clua_initHeeusState(lua_State* L) 
 {
+	luaL_newmetatable(L, MT_HEEUS_STATE);
+	lua_pushliteral(L, "__index");
+	lua_pushvalue(L, -2);
+	lua_settable(L, -3);
+
+	lua_pushcfunction(L, &sGet);
+	lua_setfield(L, -2, "Get");
+
+	lua_setglobal(L, MT_HEEUS_STATE);
+}
+
+void clua_initHeeus(lua_State* L) 
+{
 	clua_initHeeusKey(L);
 	clua_initHeeusQueryState(L);
-
+	clua_initHeeusState(L);
+	clua_initHeeusTest(L);
 }
 
 /* taken from lua5.2 source */
@@ -360,7 +416,7 @@ void clua_initstate(lua_State* L)
 	lua_register(L, GOLUA_DEFAULT_MSGHANDLER, &panic_msghandler);
 	lua_pop(L, 1);
 
-	clua_initHeeusState(L);
+	clua_initHeeus(L);
 }
 
 
